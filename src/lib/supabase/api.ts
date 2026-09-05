@@ -28,6 +28,15 @@ export function describeApiError(message: string): string {
   if (message.includes("unknown_subcategory")) {
     return "Subcategoria não encontrada. Chame list_finances para ver os ids válidos.";
   }
+  if (message.includes("unknown_investment")) {
+    return "Posição de patrimônio não encontrada. Chame list_investments para ver os ids válidos.";
+  }
+  if (message.includes("investments_user_name_key")) {
+    return "Já existe uma posição de patrimônio com esse nome.";
+  }
+  if (message.includes("investments_current_value_cents_check")) {
+    return "O valor de uma posição de patrimônio não pode ser negativo.";
+  }
   if (message.includes("entries_transfer_shape")) {
     return "Transferência precisa de duas contas diferentes e sem categoria.";
   }

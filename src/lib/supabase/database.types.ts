@@ -452,12 +452,28 @@ export type Database = {
         Args: { p_id: string; p_token: string }
         Returns: Json
       }
+      api_archive_investment: {
+        Args: { p_id: string; p_token: string }
+        Returns: Json
+      }
       api_archive_subcategory: {
         Args: { p_id: string; p_token: string }
         Returns: Json
       }
       api_create_entries: {
         Args: { p_entries: Json; p_token: string }
+        Returns: Json
+      }
+      api_delete_investment: {
+        Args: { p_id: string; p_token: string }
+        Returns: Json
+      }
+      api_investments: {
+        Args: {
+          p_history_limit?: number
+          p_include_archived?: boolean
+          p_token: string
+        }
         Returns: Json
       }
       api_merge_subcategories: {
@@ -472,8 +488,16 @@ export type Database = {
         }
         Returns: Json
       }
+      api_net_worth_history: {
+        Args: { p_limit?: number; p_token: string }
+        Returns: Json
+      }
       api_recent_entries: {
         Args: { p_limit?: number; p_token: string }
+        Returns: Json
+      }
+      api_restore_investment: {
+        Args: { p_id: string; p_token: string }
         Returns: Json
       }
       api_snapshot: { Args: { p_token: string }; Returns: Json }
@@ -487,6 +511,23 @@ export type Database = {
         }
         Returns: Json
       }
+      api_update_investment: {
+        Args: {
+          p_color?: string
+          p_id: string
+          p_institution?: string
+          p_kind?: string
+          p_name?: string
+          p_notes?: string
+          p_token: string
+          p_value_cents?: number
+        }
+        Returns: Json
+      }
+      api_update_investment_values: {
+        Args: { p_token: string; p_values: Json }
+        Returns: Json
+      }
       api_upsert_category: {
         Args: {
           p_color?: string
@@ -494,6 +535,18 @@ export type Database = {
           p_kind?: string
           p_name: string
           p_token: string
+        }
+        Returns: Json
+      }
+      api_upsert_investment: {
+        Args: {
+          p_color?: string
+          p_institution?: string
+          p_kind?: string
+          p_name: string
+          p_notes?: string
+          p_token: string
+          p_value_cents?: number
         }
         Returns: Json
       }
