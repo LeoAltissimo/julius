@@ -51,6 +51,8 @@ export const ptBR = {
     badCredentials: "E-mail ou senha incorretos.",
     signUpFailed: "Não foi possível criar a conta. Tente outro e-mail.",
     confirmEmail: "Conta criada. Confirme o e-mail para entrar.",
+    linkProblem:
+      "O link de confirmação expirou ou já foi usado. Entre com e-mail e senha.",
   },
 
   dashboard: {

@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -18,6 +19,18 @@ const credentialsSchema = z.object({
 function safeNext(value: FormDataEntryValue | null): string {
   const next = typeof value === "string" ? value : "";
   return next.startsWith("/") && !next.startsWith("//") ? next : "/";
+}
+
+/**
+ * Taken from the request rather than an environment variable, so the same code
+ * works on localhost, on a Vercel preview and in production without any of
+ * them needing to be told what they are called.
+ */
+async function requestOrigin(): Promise<string> {
+  const headerList = await headers();
+  const proto = headerList.get("x-forwarded-proto") ?? "http";
+  const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
+  return `${proto}://${host}`;
 }
 
 function parse(formData: FormData) {
@@ -71,7 +84,17 @@ export async function signUp(
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp(parsed.data);
+  const origin = await requestOrigin();
+  const next = safeNext(formData.get("next"));
+
+  const { data, error } = await supabase.auth.signUp({
+    ...parsed.data,
+    options: {
+      // The confirmation link comes back with a PKCE code, which only the
+      // callback route knows how to trade for a session.
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+    },
+  });
 
   if (error) {
     return { error: t.login.signUpFailed };
@@ -84,7 +107,7 @@ export async function signUp(
   }
 
   revalidatePath("/", "layout");
-  redirect(safeNext(formData.get("next")));
+  redirect(next);
 }
 
 export async function signOut() {

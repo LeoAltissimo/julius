@@ -13,9 +13,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; error?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, error } = await searchParams;
   const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : "/";
   const { t } = await getI18n();
 
@@ -29,6 +29,14 @@ export default async function LoginPage({
       </header>
 
       <Card className="w-full max-w-sm p-5">
+        {error ? (
+          <p
+            role="alert"
+            className="mb-4 rounded-xl border border-negative/40 bg-negative-soft px-3 py-2 text-sm text-negative"
+          >
+            {t.login.linkProblem}
+          </p>
+        ) : null}
         <LoginForm next={safeNext} />
       </Card>
     </main>

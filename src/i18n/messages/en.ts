@@ -45,6 +45,8 @@ export const en: Messages = {
     badCredentials: "Wrong email or password.",
     signUpFailed: "Could not create the account. Try another email.",
     confirmEmail: "Account created. Confirm your email to sign in.",
+    linkProblem:
+      "That confirmation link expired or was already used. Sign in with your email and password.",
   },
 
   dashboard: {
