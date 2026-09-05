@@ -8,7 +8,13 @@ import { z } from "zod";
 import { getI18n } from "@/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 
-export type AuthState = { error: string | null; notice?: string | null };
+export type AuthState = {
+  error: string | null;
+  notice?: string | null;
+  /** Set when the account exists but its address was never confirmed, so the
+   *  form can offer to send the email again instead of leaving a dead end. */
+  needsConfirmation?: boolean;
+};
 
 const credentialsSchema = z.object({
   email: z.string().trim().email(),
@@ -60,6 +66,17 @@ export async function signIn(
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
 
   if (error) {
+    // Reporting every failure as "wrong password" sends people hunting for a
+    // password that was never wrong. An unconfirmed address and a rate limit
+    // are different problems and each has a different way out.
+    if (error.code === "email_not_confirmed") {
+      return { error: t.login.emailNotConfirmed, needsConfirmation: true };
+    }
+    if (error.code === "over_request_rate_limit") {
+      return { error: t.login.tooManyAttempts };
+    }
+    // Genuinely wrong credentials stay vague on purpose: saying which half was
+    // wrong tells a stranger whether an address has an account here.
     return { error: t.login.badCredentials };
   }
 
@@ -97,6 +114,12 @@ export async function signUp(
   });
 
   if (error) {
+    if (error.code === "user_already_exists" || error.code === "email_exists") {
+      return { error: t.login.accountExists };
+    }
+    if (error.code === "over_email_send_rate_limit") {
+      return { error: t.login.tooManyEmails };
+    }
     return { error: t.login.signUpFailed };
   }
 
@@ -108,6 +131,40 @@ export async function signUp(
 
   revalidatePath("/", "layout");
   redirect(next);
+}
+
+/** Sends the confirmation email again, to the address the form already has. */
+export async function resendConfirmation(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const { t } = await getI18n();
+
+  const raw = formData.get("email");
+  const email = typeof raw === "string" ? raw.trim() : "";
+  if (!z.string().email().safeParse(email).success) {
+    return { error: t.login.invalidEmail };
+  }
+
+  const supabase = await createClient();
+  const origin = await requestOrigin();
+
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo: `${origin}/auth/callback` },
+  });
+
+  if (error) {
+    return {
+      error:
+        error.code === "over_email_send_rate_limit"
+          ? t.login.tooManyEmails
+          : t.login.resendFailed,
+    };
+  }
+
+  return { error: null, notice: t.login.confirmationResent };
 }
 
 export async function signOut() {

@@ -47,6 +47,14 @@ export const en: Messages = {
     confirmEmail: "Account created. Confirm your email to sign in.",
     linkProblem:
       "That confirmation link expired or was already used. Sign in with your email and password.",
+    emailNotConfirmed:
+      "This account exists, but the address was never confirmed. Your password is fine.",
+    resendConfirmation: "Send the confirmation email again",
+    confirmationResent: "Confirmation email sent. Check your inbox.",
+    resendFailed: "Could not send the email again.",
+    tooManyAttempts: "Too many attempts. Wait a moment and try again.",
+    tooManyEmails: "Too many emails in a short time. Try again later.",
+    accountExists: "An account with that email already exists. Sign in instead.",
   },
 
   dashboard: {

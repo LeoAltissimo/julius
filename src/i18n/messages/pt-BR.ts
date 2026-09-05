@@ -53,6 +53,14 @@ export const ptBR = {
     confirmEmail: "Conta criada. Confirme o e-mail para entrar.",
     linkProblem:
       "O link de confirmação expirou ou já foi usado. Entre com e-mail e senha.",
+    emailNotConfirmed:
+      "Esta conta existe, mas o e-mail ainda não foi confirmado. A senha está certa.",
+    resendConfirmation: "Reenviar e-mail de confirmação",
+    confirmationResent: "E-mail de confirmação enviado. Confira sua caixa.",
+    resendFailed: "Não foi possível reenviar o e-mail.",
+    tooManyAttempts: "Tentativas demais. Espere um pouco e tente de novo.",
+    tooManyEmails: "E-mails demais em pouco tempo. Tente de novo mais tarde.",
+    accountExists: "Já existe uma conta com esse e-mail. Faça login.",
   },
 
   dashboard: {
