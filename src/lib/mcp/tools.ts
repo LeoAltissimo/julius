@@ -59,6 +59,13 @@ async function callRpc<T>(
 
 const uuid = z.string().uuid();
 
+/** Patrimony is carried at a value, so zero is meaningful where an entry's amount never is. */
+const valueCents = z
+  .number()
+  .int()
+  .min(0)
+  .describe("A value as an INTEGER NUMBER OF CENTS. R$ 1.234,56 is 123456.");
+
 const entrySchema = z.object({
   kind: z
     .enum(["expense", "income", "transfer"])
@@ -104,9 +111,9 @@ export function registerJuliusTools(server: McpServer) {
     server.registerTool(
       "list_finances",
       {
-        title: "List accounts and categories",
+        title: "List accounts, categories and patrimony",
         description:
-          "The accounts, macro categories and subcategories that exist, with their ids, plus today's date. Call this before recording anything: every other tool needs real ids from here.",
+          "The accounts, macro categories, subcategories and patrimony positions that exist, with their ids, plus today's date. Call this before recording anything: every other tool needs real ids from here. For the values and history behind the patrimony, call list_investments.",
         inputSchema: z.object({}),
       },
       async (_args, ctx) => {
@@ -307,6 +314,232 @@ export function registerJuliusTools(server: McpServer) {
         const result = await callRpc<unknown>("api_archive_subcategory", {
           p_token: ctx.http?.authInfo?.token,
           p_id: subcategory_id,
+        });
+        return "error" in result ? fail(result.error) : ok(result.data);
+      },
+    );
+
+    server.registerTool(
+      "list_investments",
+      {
+        title: "List patrimony positions",
+        description:
+          "Every position that makes up the patrimony (patrimônio): ids, what each is worth in cents, when it was last updated, plus the total and the recent net worth curve. Call this before editing or removing anything here.",
+        inputSchema: z.object({
+          include_archived: z
+            .boolean()
+            .default(false)
+            .describe("Also list positions that were archived, so one can be restored"),
+          history_limit: z
+            .number()
+            .int()
+            .min(0)
+            .max(400)
+            .default(30)
+            .describe("How many points of the net worth curve to return, newest last. 0 for none."),
+        }),
+      },
+      async ({ include_archived, history_limit }, ctx) => {
+        const result = await callRpc<{ total_cents: number }>("api_investments", {
+          p_token: ctx.http?.authInfo?.token,
+          p_include_archived: include_archived,
+          p_history_limit: history_limit,
+        });
+
+        if ("error" in result) return fail(result.error);
+
+        return ok({
+          ...result.data,
+          total: formatCents(result.data.total_cents),
+        });
+      },
+    );
+
+    server.registerTool(
+      "add_investment",
+      {
+        title: "Add a patrimony position",
+        description:
+          "Adds a position to the patrimony — an account at a broker, a fund, a property, anything carried at a value you keep up to date. If a position with that name already exists it is updated instead of duplicated, because two lines meaning the same thing split the net worth curve in half.",
+        inputSchema: z.object({
+          name: z.string().min(1).max(80).describe("What you call it, e.g. 'Tesouro Selic'"),
+          value_cents: valueCents.describe(
+            "What it is worth today, as an INTEGER NUMBER OF CENTS. R$ 12.500,00 is 1250000. Never send a decimal.",
+          ),
+          institution: z.string().max(80).optional().describe("Broker or bank holding it"),
+          kind: z
+            .string()
+            .max(40)
+            .optional()
+            .describe("Free text, e.g. 'Renda fixa', 'Ações', 'Imóvel'"),
+          color: z
+            .string()
+            .regex(/^#[0-9a-fA-F]{6}$/)
+            .optional(),
+          notes: z.string().max(2000).optional(),
+        }),
+      },
+      async ({ name, value_cents, institution, kind, color, notes }, ctx) => {
+        const result = await callRpc<{
+          id: string;
+          created: boolean;
+          restored: boolean;
+          current_value_cents: number;
+        }>("api_upsert_investment", {
+          p_token: ctx.http?.authInfo?.token,
+          p_name: name,
+          p_value_cents: value_cents,
+          p_institution: institution ?? null,
+          p_kind: kind ?? null,
+          p_color: color ?? null,
+          p_notes: notes ?? null,
+        });
+
+        if ("error" in result) return fail(result.error);
+
+        return ok({
+          ...result.data,
+          confirm_with_the_user: `${name}: ${formatCents(result.data.current_value_cents)}`,
+        });
+      },
+    );
+
+    server.registerTool(
+      "update_investment",
+      {
+        title: "Edit a patrimony position",
+        description:
+          "Changes what a position is worth, or its name, institution, kind, colour or notes. Omitted fields are left alone. A new value is appended to the history, so the net worth curve moves exactly as it would had you typed it into the app.",
+        inputSchema: z.object({
+          investment_id: uuid.describe("A position id from list_investments"),
+          name: z.string().min(1).max(80).optional(),
+          value_cents: valueCents
+            .optional()
+            .describe(
+              "The new value, as an INTEGER NUMBER OF CENTS. This is the total the position is worth now, not the amount it moved by.",
+            ),
+          institution: z
+            .string()
+            .max(80)
+            .optional()
+            .describe("Send an empty string to clear it"),
+          kind: z.string().max(40).optional().describe("Send an empty string to clear it"),
+          color: z
+            .string()
+            .regex(/^#[0-9a-fA-F]{6}$/)
+            .optional(),
+          notes: z.string().max(2000).optional().describe("Send an empty string to clear it"),
+        }),
+      },
+      async (
+        { investment_id, name, value_cents, institution, kind, color, notes },
+        ctx,
+      ) => {
+        const result = await callRpc<{
+          previous_value_cents: number;
+          current_value_cents: number;
+        }>("api_update_investment", {
+          p_token: ctx.http?.authInfo?.token,
+          p_id: investment_id,
+          p_name: name ?? null,
+          p_value_cents: value_cents ?? null,
+          p_institution: institution ?? null,
+          p_kind: kind ?? null,
+          p_color: color ?? null,
+          p_notes: notes ?? null,
+        });
+
+        if ("error" in result) return fail(result.error);
+
+        return ok({
+          ...result.data,
+          confirm_with_the_user: `${formatCents(result.data.previous_value_cents)} → ${formatCents(result.data.current_value_cents)}`,
+        });
+      },
+    );
+
+    server.registerTool(
+      "update_investment_values",
+      {
+        title: "Update several patrimony values at once",
+        description:
+          "The periodic ritual: whatever each position is worth today, in one call. Values that did not move are reported rather than written, so the history stays a record of real movements. Send the new total for each position, never the amount it changed by.",
+        inputSchema: z.object({
+          values: z
+            .array(
+              z.object({
+                investment_id: uuid,
+                value_cents: valueCents,
+              }),
+            )
+            .min(1)
+            .max(100),
+        }),
+      },
+      async ({ values }, ctx) => {
+        const result = await callRpc<{ total_cents: number }>(
+          "api_update_investment_values",
+          {
+            p_token: ctx.http?.authInfo?.token,
+            p_values: values,
+          },
+        );
+
+        if ("error" in result) return fail(result.error);
+
+        return ok({
+          ...result.data,
+          total: formatCents(result.data.total_cents),
+        });
+      },
+    );
+
+    server.registerTool(
+      "archive_investment",
+      {
+        title: "Remove a patrimony position",
+        description:
+          "The way to remove a position: it stops counting towards the total and leaves the app, but its history stays, so the past shape of the net worth curve does not change. Reversible with restore_investment.",
+        inputSchema: z.object({ investment_id: uuid }),
+      },
+      async ({ investment_id }, ctx) => {
+        const result = await callRpc<unknown>("api_archive_investment", {
+          p_token: ctx.http?.authInfo?.token,
+          p_id: investment_id,
+        });
+        return "error" in result ? fail(result.error) : ok(result.data);
+      },
+    );
+
+    server.registerTool(
+      "restore_investment",
+      {
+        title: "Bring an archived position back",
+        description:
+          "Puts an archived position back on the board, counting towards the total again. Find its id with list_investments and include_archived.",
+        inputSchema: z.object({ investment_id: uuid }),
+      },
+      async ({ investment_id }, ctx) => {
+        const result = await callRpc<unknown>("api_restore_investment", {
+          p_token: ctx.http?.authInfo?.token,
+          p_id: investment_id,
+        });
+        return "error" in result ? fail(result.error) : ok(result.data);
+      },
+    );
+
+    server.registerTool(
+      "delete_investment",
+      {
+        title: "Delete a patrimony position for good",
+        description:
+          "Erases a position and its whole value history, rewriting the net worth curve as though it had never existed. That is right for one opened by mistake and wrong for one you simply closed — for that use archive_investment. Irreversible, so confirm with the user first.",
+        inputSchema: z.object({ investment_id: uuid }),
+      },
+      async ({ investment_id }, ctx) => {
+        const result = await callRpc<unknown>("api_delete_investment", {
+          p_token: ctx.http?.authInfo?.token,
+          p_id: investment_id,
         });
         return "error" in result ? fail(result.error) : ok(result.data);
       },

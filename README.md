@@ -113,7 +113,20 @@ not. Anything that can send a header should use `/api/mcp`.
 
 Tools: `list_finances`, `list_recent_transactions`, `record_transactions`,
 `create_category`, `create_subcategory`, `update_category`, `move_subcategory`,
-`merge_subcategories`, `archive_subcategory`, `archive_category`.
+`merge_subcategories`, `archive_subcategory`, `archive_category`,
+`list_investments`, `add_investment`, `update_investment`,
+`update_investment_values`, `archive_investment`, `restore_investment`,
+`delete_investment`.
+
+The patrimony is reachable the same way, which is what turns the periodic
+ritual — open the app, retype what each position is worth today — into a
+sentence: *"o Tesouro Selic está em R$ 12.480,30 e a carteira de ações em
+R$ 8.115,00"*. Values written by an agent go through the same column update the
+form uses, so the snapshot trigger appends to the history and the net worth
+curve cannot tell the two apart. Removing a position means `archive_investment`
+— it stops counting and leaves the app while its history stays, so the past
+shape of the curve does not change under you; `delete_investment` is the
+irreversible one, for a position opened by mistake.
 
 Three things about it are worth knowing:
 
