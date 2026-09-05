@@ -62,7 +62,7 @@ of categories, all editable.
 | `pnpm check` | lint + typecheck + build (run before committing) |
 | `pnpm db:reset` | rebuilds the local database from scratch |
 | `pnpm db:types` | regenerates the TypeScript types from the schema |
-| `pnpm icons` | regenerates the PWA icons (also runs on `dev` and `build`) |
+| `pnpm icons` | regenerates the PWA icons from `assets/icon-source.*` |
 
 ## Language
 
@@ -81,9 +81,10 @@ and the date wording follow the locale.
 
 ## Icons
 
-App icons are generated rather than committed, so the repository never
-redistributes artwork. A clone gets a built-in mark drawn by the script; a
-personal deployment can point `ICON_SOURCE_URL` at its own image. See
+The icons are committed, but the artwork they came from is not. `pnpm icons`
+regenerates them from a local image or from `ICON_SOURCE_URL`, and falls back
+to drawing a built-in mark — three ascending bars, rasterised with nothing but
+`node:zlib` — when there is no artwork at all. See
 [`assets/README.md`](assets/README.md).
 
 ## About the keys
