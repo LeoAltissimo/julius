@@ -104,6 +104,13 @@ the endpoint with the token as a bearer credential:
 }
 ```
 
+Phone and web connectors are configured through a form that offers OAuth fields
+and nowhere to put a header, so there is a second route that carries the token
+in the path — paste `https://your-deployment.vercel.app/api/mcp/julius_...` as
+the URL and leave the OAuth fields empty. It is the fallback rather than the
+default: URLs turn up in server logs in a way that `Authorization` values do
+not. Anything that can send a header should use `/api/mcp`.
+
 Tools: `list_finances`, `list_recent_transactions`, `record_transactions`,
 `create_category`, `create_subcategory`, `update_category`, `move_subcategory`,
 `merge_subcategories`, `archive_subcategory`, `archive_category`.

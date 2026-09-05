@@ -314,6 +314,10 @@ export const en: Messages = {
     createToken: "Generate token",
     tokenOnceWarning:
       "Copy it now: this token is never shown again. Lose it and you generate another and revoke this one.",
+    tokenLabel: "Token (for Claude Code and Desktop)",
+    connectorUrl: "URL for the Claude phone app",
+    connectorUrlNote:
+      "In the app, paste only the URL and leave Client ID and Client Secret empty. It carries the token, so treat it like a password.",
     copy: "Copy",
     copied: "Copied",
     tokenNameRequired: "Give the token a name.",

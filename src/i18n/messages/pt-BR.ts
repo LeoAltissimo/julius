@@ -320,6 +320,10 @@ export const ptBR = {
     createToken: "Gerar token",
     tokenOnceWarning:
       "Copie agora: este token não aparece de novo. Se perder, gere outro e revogue este.",
+    tokenLabel: "Token (para Claude Code e Desktop)",
+    connectorUrl: "URL para o app do Claude no celular",
+    connectorUrlNote:
+      "No app, cole só a URL e deixe Client ID e Client Secret vazios. Ela carrega o token, então trate-a como senha.",
     copy: "Copiar",
     copied: "Copiado",
     tokenNameRequired: "Dê um nome ao token.",

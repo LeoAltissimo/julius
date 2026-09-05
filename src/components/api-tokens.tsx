@@ -42,11 +42,21 @@ export function ApiTokens({
       <CopyRow label={t.settings.mcpEndpoint} value={endpoint} />
 
       {state.token ? (
-        <div className="rounded-xl border border-accent/40 bg-surface-3 p-3">
-          <p className="mb-2 text-xs text-text-muted">
+        <div className="flex flex-col gap-3 rounded-xl border border-accent/40 bg-surface-3 p-3">
+          <p className="text-xs text-text-muted">
             {t.settings.tokenOnceWarning}
           </p>
-          <CopyRow label="" value={state.token} />
+          <CopyRow label={t.settings.tokenLabel} value={state.token} />
+          {/* The phone connector form has no header field, so it needs the
+              token in the URL. Shown here because this is the only moment the
+              plaintext exists. */}
+          <CopyRow
+            label={t.settings.connectorUrl}
+            value={`${endpoint}/${state.token}`}
+          />
+          <p className="text-xs text-text-faint">
+            {t.settings.connectorUrlNote}
+          </p>
         </div>
       ) : null}
 
