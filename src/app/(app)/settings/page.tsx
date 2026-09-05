@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Languages, LogOut, Shapes, Wallet } from "lucide-react";
+import { headers } from "next/headers";
+import { Bot, ChevronRight, Languages, LogOut, Shapes, Wallet } from "lucide-react";
 
 import { signOut } from "@/app/login/actions";
-import { Button, Card } from "@/components/ui";
+import { ApiTokens, type ApiTokenRow } from "@/components/api-tokens";
+import { Button, Card, CardHeader } from "@/components/ui";
 import { LOCALES, LOCALE_LABELS } from "@/i18n/config";
 import { getI18n } from "@/i18n/server";
 import { requireUser } from "@/lib/supabase/server";
@@ -16,8 +18,20 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SettingsPage() {
-  const { user } = await requireUser();
+  const { supabase, user } = await requireUser();
   const { t, locale } = await getI18n();
+
+  const [{ data: tokens }, headerList] = await Promise.all([
+    supabase
+      .from("api_tokens")
+      .select("id, name, prefix, created_at, last_used_at, revoked_at")
+      .order("created_at", { ascending: false }),
+    headers(),
+  ]);
+
+  const proto = headerList.get("x-forwarded-proto") ?? "http";
+  const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
+  const mcpEndpoint = `${proto}://${host}/api/mcp`;
 
   const links = [
     {
@@ -88,6 +102,24 @@ export default async function SettingsPage() {
               </Button>
             </form>
           ))}
+        </div>
+      </Card>
+
+      <Card className="pb-4">
+        <CardHeader
+          title={
+            <span className="flex items-center gap-1.5">
+              <Bot aria-hidden className="size-4 text-text-muted" />
+              {t.settings.agentAccess}
+            </span>
+          }
+          description={t.settings.agentAccessDescription}
+        />
+        <div className="px-4 pt-3">
+          <ApiTokens
+            tokens={(tokens ?? []) as ApiTokenRow[]}
+            endpoint={mcpEndpoint}
+          />
         </div>
       </Card>
 

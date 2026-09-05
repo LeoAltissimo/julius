@@ -310,6 +310,27 @@ export const ptBR = {
     signedInAs: "Conectado como",
     signOut: "Sair",
     footer: "Julius · seus dados ficam no seu próprio Supabase",
+
+    agentAccess: "Acesso para agentes",
+    agentAccessDescription:
+      "Um token deixa um assistente ler suas categorias e registrar lançamentos por você — por exemplo, a partir da foto de uma nota. Ele age como você e nada além disso.",
+    mcpEndpoint: "Endereço do servidor MCP",
+    tokenName: "Para que é este token",
+    tokenNamePlaceholder: "Claude no celular",
+    createToken: "Gerar token",
+    tokenOnceWarning:
+      "Copie agora: este token não aparece de novo. Se perder, gere outro e revogue este.",
+    copy: "Copiar",
+    copied: "Copiado",
+    tokenNameRequired: "Dê um nome ao token.",
+    tokenFailed: "Não foi possível gerar o token.",
+    revoke: "Revogar",
+    removeToken: "Excluir",
+    noTokens: "Nenhum token ainda.",
+    tokenRevoked: "revogado",
+    tokenNeverUsed: "nunca usado",
+    tokenLastUsed: (when: string) => `usado ${when}`,
+    tokenCreated: (when: string) => `criado ${when}`,
   },
 
   offline: {

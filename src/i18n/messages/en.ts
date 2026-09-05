@@ -304,6 +304,27 @@ export const en: Messages = {
     signedInAs: "Signed in as",
     signOut: "Sign out",
     footer: "Julius · your data lives in your own Supabase",
+
+    agentAccess: "Agent access",
+    agentAccessDescription:
+      "A token lets an assistant read your categories and record entries for you — from a photo of a receipt, for instance. It acts as you and nothing more.",
+    mcpEndpoint: "MCP server address",
+    tokenName: "What this token is for",
+    tokenNamePlaceholder: "Claude on my phone",
+    createToken: "Generate token",
+    tokenOnceWarning:
+      "Copy it now: this token is never shown again. Lose it and you generate another and revoke this one.",
+    copy: "Copy",
+    copied: "Copied",
+    tokenNameRequired: "Give the token a name.",
+    tokenFailed: "Could not generate the token.",
+    revoke: "Revoke",
+    removeToken: "Delete",
+    noTokens: "No tokens yet.",
+    tokenRevoked: "revoked",
+    tokenNeverUsed: "never used",
+    tokenLastUsed: (when: string) => `used ${when}`,
+    tokenCreated: (when: string) => `created ${when}`,
   },
 
   offline: {

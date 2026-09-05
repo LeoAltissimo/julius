@@ -88,6 +88,39 @@ export type Database = {
         }
         Relationships: []
       }
+      api_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          last_used_at: string | null
+          name: string
+          prefix: string
+          revoked_at: string | null
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          name: string
+          prefix: string
+          revoked_at?: string | null
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          prefix?: string
+          revoked_at?: string | null
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           archived_at: string | null
@@ -141,6 +174,7 @@ export type Database = {
           counter_account_id: string | null
           created_at: string
           description: string
+          external_ref: string | null
           id: string
           installment_group_id: string | null
           installment_number: number | null
@@ -148,6 +182,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["entry_kind"]
           notes: string | null
           occurred_on: string
+          source: string
           subcategory_id: string | null
           updated_at: string
           user_id: string
@@ -159,6 +194,7 @@ export type Database = {
           counter_account_id?: string | null
           created_at?: string
           description?: string
+          external_ref?: string | null
           id?: string
           installment_group_id?: string | null
           installment_number?: number | null
@@ -166,6 +202,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["entry_kind"]
           notes?: string | null
           occurred_on: string
+          source?: string
           subcategory_id?: string | null
           updated_at?: string
           user_id: string
@@ -177,6 +214,7 @@ export type Database = {
           counter_account_id?: string | null
           created_at?: string
           description?: string
+          external_ref?: string | null
           id?: string
           installment_group_id?: string | null
           installment_number?: number | null
@@ -184,6 +222,7 @@ export type Database = {
           kind?: Database["public"]["Enums"]["entry_kind"]
           notes?: string | null
           occurred_on?: string
+          source?: string
           subcategory_id?: string | null
           updated_at?: string
           user_id?: string
@@ -409,6 +448,77 @@ export type Database = {
       }
     }
     Functions: {
+      api_archive_category: {
+        Args: { p_id: string; p_token: string }
+        Returns: Json
+      }
+      api_archive_subcategory: {
+        Args: { p_id: string; p_token: string }
+        Returns: Json
+      }
+      api_create_entries: {
+        Args: { p_entries: Json; p_token: string }
+        Returns: Json
+      }
+      api_merge_subcategories: {
+        Args: { p_from_id: string; p_into_id: string; p_token: string }
+        Returns: Json
+      }
+      api_move_subcategory: {
+        Args: {
+          p_subcategory_id: string
+          p_target_category_id: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      api_recent_entries: {
+        Args: { p_limit?: number; p_token: string }
+        Returns: Json
+      }
+      api_snapshot: { Args: { p_token: string }; Returns: Json }
+      api_update_category: {
+        Args: {
+          p_color?: string
+          p_description?: string
+          p_id: string
+          p_name?: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      api_upsert_category: {
+        Args: {
+          p_color?: string
+          p_description?: string
+          p_kind?: string
+          p_name: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      api_upsert_subcategory: {
+        Args: {
+          p_category_id: string
+          p_description?: string
+          p_name: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      api_user_for_token: { Args: { p_token: string }; Returns: string }
+      move_subcategory: {
+        Args: { p_subcategory_id: string; p_target_category_id: string }
+        Returns: number
+      }
+      move_subcategory_owned: {
+        Args: {
+          p_subcategory_id: string
+          p_target_category_id: string
+          p_user_id: string
+        }
+        Returns: number
+      }
       restore_default_categories: { Args: never; Returns: undefined }
       seed_default_categories: {
         Args: { p_user_id: string }

@@ -292,7 +292,7 @@ export async function updateSubcategory(
 
   const { data: existing } = await supabase
     .from("subcategories")
-    .select("image_path")
+    .select("image_path, category_id")
     .eq("id", id)
     .maybeSingle();
 
@@ -306,14 +306,28 @@ export async function updateSubcategory(
 
   const clearImage = formData.get("removeImage") === "on";
 
+  // Moving to another macro category cannot be a plain update: entries carry
+  // (subcategory_id, category_id) together, so the subcategory and every entry
+  // pointing at it have to change in one go. The database function defers that
+  // foreign key and moves both; doing it here would fail on any subcategory
+  // that has ever been used.
+  if (existing && existing.category_id !== parsed.data.categoryId) {
+    const { error: moveError } = await supabase.rpc("move_subcategory", {
+      p_subcategory_id: id,
+      p_target_category_id: parsed.data.categoryId,
+    });
+
+    if (moveError) {
+      await removeCategoryImage(supabase, image.path);
+      return { error: describeSubcategory(t, moveError.message) };
+    }
+  }
+
   const { error } = await supabase
     .from("subcategories")
     .update({
       name: parsed.data.name,
       description: parsed.data.description,
-      // Moving a subcategory to another macro category is allowed, and the
-      // composite foreign key on entries keeps existing rows consistent.
-      category_id: parsed.data.categoryId,
       ...(image.path
         ? { image_path: image.path }
         : clearImage

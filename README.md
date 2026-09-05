@@ -79,6 +79,53 @@ Amounts stay in reais in both languages — this is a Brazilian app, and
 translating the currency would be translating the money. Only the separators
 and the date wording follow the locale.
 
+## Recording from a photo (MCP)
+
+The app ships an [MCP](https://modelcontextprotocol.io) server at `/api/mcp`, so
+an assistant can file a receipt for you: you photograph the till slip or the
+card statement, the assistant reads it, and it books the entries.
+
+The split of labour is deliberate. The model is the thing with eyes, so it does
+the reading; the server does nothing but validate and write. There is no OCR
+here and no guessing at categories — a tool call has to carry real ids fetched
+from `list_finances` first.
+
+Generate a token under **Settings → Agent access**, then point any MCP client at
+the endpoint with the token as a bearer credential:
+
+```json
+{
+  "mcpServers": {
+    "julius": {
+      "url": "https://your-deployment.vercel.app/api/mcp",
+      "headers": { "Authorization": "Bearer julius_..." }
+    }
+  }
+}
+```
+
+Tools: `list_finances`, `list_recent_transactions`, `record_transactions`,
+`create_category`, `create_subcategory`, `update_category`, `move_subcategory`,
+`merge_subcategories`, `archive_subcategory`, `archive_category`.
+
+Three things about it are worth knowing:
+
+**No key in the deployment can cross accounts.** Every tool call passes the
+token to a `security definer` database function that resolves the owner from
+it, so the user id is never a parameter a caller controls. That is why the
+deployment still holds nothing but the publishable key — there is no service
+role key anywhere, and the route on its own can read and write exactly nothing.
+Only the SHA-256 of a token is stored, so the row is useless to anyone reading
+the database.
+
+**Sending the same receipt twice is safe.** Entries take an `external_ref`; a
+repeat is reported as a duplicate and ignored rather than booked again.
+
+**Amounts come back formatted.** `record_transactions` echoes
+`R$ 154,99` alongside what it wrote, because the one mistake that really hurts
+is sending reais where cents were expected and booking a hundred times the
+real value.
+
 ## Icons
 
 The icons are committed, but the artwork they came from is not. `pnpm icons`
