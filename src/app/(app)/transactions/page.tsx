@@ -146,9 +146,22 @@ function EntryRow({
     entry.category?.name ||
     (isTransfer ? t.transactions.transfer : t.transactions.noDescription);
 
+  // The method only earns its place in the line when it says something the
+  // account name does not: "Nubank · Crédito" is worth it, "Carteira ·
+  // Dinheiro" is the same word twice.
+  const method =
+    entry.payment_method && entry.payment_method !== "cash"
+      ? t.paymentMethods[entry.payment_method]
+      : null;
+
   const subtitle = isTransfer
     ? t.transactions.transferTo(entry.account?.name ?? t.common.none)
-    : [entry.category?.name, entry.subcategory?.name, entry.account?.name]
+    : [
+        entry.category?.name,
+        entry.subcategory?.name,
+        entry.account?.name,
+        method,
+      ]
         .filter(Boolean)
         .join(" · ");
 

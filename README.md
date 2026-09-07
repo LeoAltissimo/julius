@@ -114,9 +114,20 @@ not. Anything that can send a header should use `/api/mcp`.
 Tools: `list_finances`, `list_recent_transactions`, `record_transactions`,
 `create_category`, `create_subcategory`, `update_category`, `move_subcategory`,
 `merge_subcategories`, `archive_subcategory`, `archive_category`,
+`create_account`, `update_account`, `archive_account`, `restore_account`,
 `list_investments`, `add_investment`, `update_investment`,
 `update_investment_values`, `archive_investment`, `restore_investment`,
 `delete_investment`.
+
+An entry carries **how it was paid** — debit, credit, pix, cash, boleto,
+transfer — alongside which account it moved through. A card is an account of
+type `credit_card`, which is what makes a purchase on it bookable as credit and
+what carries the limit, the statement days and the account that settles the
+bill; so registering a card and registering a bank are the same call. Two rules
+about the method live in the database rather than in each writer, because the
+form and the API are two writers and a rule stated twice eventually disagrees
+with itself: spending on a card is filled in as `credit` when nothing was said,
+and `credit` on anything that is not a card is refused.
 
 The patrimony is reachable the same way, which is what turns the periodic
 ritual — open the app, retype what each position is worth today — into a

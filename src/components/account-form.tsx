@@ -25,6 +25,7 @@ const initialState: AccountFormState = { error: null };
 export function AccountForm({
   action,
   account,
+  accounts = [],
   submitLabel,
 }: {
   action: (
@@ -32,6 +33,8 @@ export function AccountForm({
     formData: FormData,
   ) => Promise<AccountFormState>;
   account?: AccountRow;
+  /** Everything that could settle a card's bill: the user's non-card accounts. */
+  accounts?: AccountRow[];
   submitLabel: string;
 }) {
   const { t } = useI18n();
@@ -39,6 +42,11 @@ export function AccountForm({
   const [type, setType] = useState<AccountType>(account?.type ?? "checking");
 
   const isCard = type === "credit_card";
+
+  // A card cannot settle a card, and nothing settles itself.
+  const settlementOptions = accounts.filter(
+    (option) => option.type !== "credit_card" && option.id !== account?.id,
+  );
 
   return (
     <form action={formAction} className="flex flex-col gap-4 pb-4">
@@ -90,6 +98,23 @@ export function AccountForm({
               defaultValueCents={account?.credit_limit_cents ?? 0}
             />
           </div>
+
+          <Field
+            label={t.accounts.form.settlement}
+            hint={t.accounts.form.settlementHint}
+          >
+            <Select
+              name="settlementAccountId"
+              defaultValue={account?.settlement_account_id ?? ""}
+            >
+              <option value="">{t.accounts.form.noSettlement}</option>
+              {settlementOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label={t.accounts.form.closingDay}>

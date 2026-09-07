@@ -28,6 +28,24 @@ export function describeApiError(message: string): string {
   if (message.includes("unknown_subcategory")) {
     return "Subcategoria não encontrada. Chame list_finances para ver os ids válidos.";
   }
+  if (message.includes("unknown_account")) {
+    return "Conta ou cartão não encontrado. Chame list_finances para ver os ids válidos.";
+  }
+  if (message.includes("credit_needs_card")) {
+    return "Pagamento no crédito exige uma conta do tipo cartão (credit_card). Cadastre o cartão com create_account ou escolha outro método.";
+  }
+  if (message.includes("settlement_only_on_card")) {
+    return "Só um cartão tem conta que paga a fatura.";
+  }
+  if (message.includes("settlement_cannot_be_card")) {
+    return "A conta que paga a fatura de um cartão não pode ser outro cartão.";
+  }
+  if (message.includes("card_fields_on_non_card")) {
+    return "Limite, dias de fatura e conta pagadora só existem em contas do tipo cartão (credit_card).";
+  }
+  if (message.includes("accounts_user_name_key")) {
+    return "Já existe uma conta com esse nome.";
+  }
   if (message.includes("unknown_investment")) {
     return "Posição de patrimônio não encontrada. Chame list_investments para ver os ids válidos.";
   }

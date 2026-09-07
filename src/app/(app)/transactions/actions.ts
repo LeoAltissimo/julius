@@ -49,6 +49,12 @@ function entrySchema(t: Messages) {
       categoryId: optionalUuid,
       subcategoryId: optionalUuid,
       installments: z.coerce.number().int().min(1).max(72).default(1),
+      // Left empty on a card: the database fills in 'credit', which is the
+      // only thing a card purchase can be, and the same rule the API path gets.
+      paymentMethod: z
+        .enum(["debit", "credit", "pix", "cash", "boleto", "transfer", "other"])
+        .nullable()
+        .catch(null),
     })
     .superRefine((value, ctx) => {
       if (value.kind === "transfer") {
@@ -91,6 +97,7 @@ function readForm(t: Messages, formData: FormData) {
     categoryId: formData.get("categoryId") ?? "",
     subcategoryId: formData.get("subcategoryId") ?? "",
     installments: formData.get("installments") ?? 1,
+    paymentMethod: formData.get("paymentMethod") || null,
   });
 }
 
@@ -118,6 +125,9 @@ function describe(t: Messages, message: string): string {
   }
   if (message.includes("subcategory_id_category_id")) {
     return t.entryForm.subcategoryMismatch;
+  }
+  if (message.includes("credit_needs_card")) {
+    return t.entryForm.creditNeedsCard;
   }
   return t.entryForm.saveFailed;
 }
@@ -150,6 +160,7 @@ export async function createEntry(
     counter_account_id: value.counterAccountId,
     category_id: value.categoryId,
     subcategory_id: value.subcategoryId,
+    payment_method: value.paymentMethod,
   };
 
   // A 12x purchase becomes twelve dated rows sharing one group id. Spreading
@@ -220,6 +231,7 @@ export async function updateEntry(
       counter_account_id: value.counterAccountId,
       category_id: value.categoryId,
       subcategory_id: value.subcategoryId,
+      payment_method: value.paymentMethod,
     })
     .eq("id", id);
 

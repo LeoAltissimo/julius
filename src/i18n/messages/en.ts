@@ -99,6 +99,16 @@ export const en: Messages = {
     deleteGroup: (total: number) => `Delete all ${total} instalments`,
   },
 
+  paymentMethods: {
+    debit: "Debit",
+    credit: "Credit",
+    pix: "Pix",
+    cash: "Cash",
+    boleto: "Boleto",
+    transfer: "Transfer",
+    other: "Other",
+  },
+
   entryForm: {
     kindGroup: "Transaction type",
     expense: "Expense",
@@ -137,6 +147,11 @@ export const en: Messages = {
       "A transfer needs two different accounts and no category.",
     subcategoryMismatch:
       "That subcategory does not belong to the chosen category.",
+    paymentMethod: "Payment method",
+    noPaymentMethod: "Not recorded",
+    paymentMethodOnCard: "A card purchase is always credit",
+    creditNeedsCard:
+      "Credit only works on a card account. Pick the card, or another method.",
     saveFailed: "Could not save the transaction.",
   },
 
@@ -247,6 +262,11 @@ export const en: Messages = {
       invalidDay: "Enter a day between 1 and 31.",
       invalidAccount: "Invalid account.",
       duplicate: "An account with that name already exists.",
+      settlement: "Account that pays the bill",
+      settlementHint: "Where the money leaves when the bill falls due",
+      noSettlement: "Not set",
+      invalidSettlement: "Pick a valid account.",
+      settlementCannotBeCard: "The account that pays the bill cannot be another card.",
       saveFailed: "Could not save the account.",
     },
   },

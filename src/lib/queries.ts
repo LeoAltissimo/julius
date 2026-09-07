@@ -8,6 +8,7 @@ export type Client = SupabaseClient<Database>;
 export type EntryKind = Database["public"]["Enums"]["entry_kind"];
 export type CategoryKind = Database["public"]["Enums"]["category_kind"];
 export type AccountType = Database["public"]["Enums"]["account_type"];
+export type PaymentMethod = Database["public"]["Enums"]["payment_method"];
 
 export type AccountRow = Database["public"]["Tables"]["accounts"]["Row"];
 export type CategoryRow = Database["public"]["Tables"]["categories"]["Row"];
@@ -18,7 +19,7 @@ export type InvestmentRow = Database["public"]["Tables"]["investments"]["Row"];
 const ENTRY_SELECT = `
   id, kind, amount_cents, occurred_on, description, notes,
   account_id, counter_account_id, category_id, subcategory_id,
-  installment_group_id, installment_number, installment_total,
+  installment_group_id, installment_number, installment_total, payment_method,
   account:accounts!entries_account_id_user_id_fkey (id, name, color, type),
   category:categories!entries_category_id_user_id_fkey (id, name, color, kind),
   subcategory:subcategories!entries_subcategory_id_user_id_fkey (id, name)
@@ -38,6 +39,7 @@ export type Entry = {
   installment_group_id: string | null;
   installment_number: number | null;
   installment_total: number | null;
+  payment_method: PaymentMethod | null;
   account: { id: string; name: string; color: string; type: AccountType } | null;
   category: {
     id: string;
