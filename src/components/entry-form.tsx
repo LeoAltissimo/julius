@@ -24,6 +24,16 @@ import type {
 
 import type { EntryFormState } from "@/app/(app)/transactions/actions";
 
+const PAYMENT_METHODS = [
+  "debit",
+  "credit",
+  "pix",
+  "cash",
+  "boleto",
+  "transfer",
+  "other",
+] as const;
+
 const initialState: EntryFormState = { error: null };
 
 export function EntryForm({
@@ -53,6 +63,18 @@ export function EntryForm({
     entry?.installment_total ?? 1,
   );
   const [amountCents, setAmountCents] = useState(entry?.amount_cents ?? 0);
+  const [accountId, setAccountId] = useState(
+    entry?.account_id ?? accounts[0]?.id ?? "",
+  );
+  const [paymentMethod, setPaymentMethod] = useState<string>(
+    entry?.payment_method ?? "",
+  );
+
+  // A purchase on a card is a credit purchase, so the choice is not a choice:
+  // the field shows what it will be and the database writes it.
+  const selectedIsCard =
+    accounts.find((account) => account.id === accountId)?.type ===
+    "credit_card";
 
   const kinds: Array<{ value: EntryKind; label: string }> = [
     { value: "expense", label: t.entryForm.expense },
@@ -137,7 +159,8 @@ export function EntryForm({
           <Select
             name="accountId"
             required
-            defaultValue={entry?.account_id ?? accounts[0]?.id ?? ""}
+            value={accountId}
+            onChange={(event) => setAccountId(event.target.value)}
           >
             {accounts.map((account) => (
               <option key={account.id} value={account.id}>
@@ -147,6 +170,29 @@ export function EntryForm({
           </Select>
         </Field>
       </div>
+
+      {kind === "transfer" ? null : (
+        <Field
+          label={t.entryForm.paymentMethod}
+          hint={
+            selectedIsCard ? t.entryForm.paymentMethodOnCard : undefined
+          }
+        >
+          <Select
+            name="paymentMethod"
+            value={selectedIsCard ? "credit" : paymentMethod}
+            disabled={selectedIsCard}
+            onChange={(event) => setPaymentMethod(event.target.value)}
+          >
+            <option value="">{t.entryForm.noPaymentMethod}</option>
+            {PAYMENT_METHODS.map((option) => (
+              <option key={option} value={option}>
+                {t.paymentMethods[option]}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      )}
 
       <Field label={t.entryForm.description}>
         <Input

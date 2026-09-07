@@ -59,6 +59,25 @@ async function callRpc<T>(
 
 const uuid = z.string().uuid();
 
+const paymentMethod = z.enum([
+  "debit",
+  "credit",
+  "pix",
+  "cash",
+  "boleto",
+  "transfer",
+  "other",
+]);
+
+const accountType = z.enum([
+  "checking",
+  "savings",
+  "credit_card",
+  "cash",
+  "investment",
+  "other",
+]);
+
 /** Patrimony is carried at a value, so zero is meaningful where an entry's amount never is. */
 const valueCents = z
   .number()
@@ -83,7 +102,14 @@ const entrySchema = z.object({
     .describe("Date on the receipt, YYYY-MM-DD"),
   description: z.string().max(200).default("").describe("What it was, in the user's words"),
   notes: z.string().max(2000).optional(),
-  account_id: uuid.describe("An account id from list_finances"),
+  account_id: uuid.describe(
+    "An account id from list_finances. For a credit purchase this is the CARD; for debit, pix or cash it is the bank account or wallet the money left.",
+  ),
+  payment_method: paymentMethod
+    .optional()
+    .describe(
+      "How it was paid. Omit on a card and it is filled in as credit, which is the only thing a card purchase can be. 'credit' is rejected on anything that is not a card.",
+    ),
   counter_account_id: uuid.optional().describe("Destination account, transfers only"),
   category_id: uuid.optional().describe("A macro category id from list_finances"),
   subcategory_id: uuid
@@ -111,9 +137,9 @@ export function registerJuliusTools(server: McpServer) {
     server.registerTool(
       "list_finances",
       {
-        title: "List accounts, categories and patrimony",
+        title: "List accounts, cards, categories and patrimony",
         description:
-          "The accounts, macro categories, subcategories and patrimony positions that exist, with their ids, plus today's date. Call this before recording anything: every other tool needs real ids from here. For the values and history behind the patrimony, call list_investments.",
+          "The accounts and cards, macro categories, subcategories and patrimony positions that exist, with their ids, plus today's date and the payment methods you may use. Each account says whether it is a card (`is_card`), its limit and statement days, and which account settles its bill. Call this before recording anything: every other tool needs real ids from here. For the values and history behind the patrimony, call list_investments.",
         inputSchema: z.object({}),
       },
       async (_args, ctx) => {
@@ -314,6 +340,149 @@ export function registerJuliusTools(server: McpServer) {
         const result = await callRpc<unknown>("api_archive_subcategory", {
           p_token: ctx.http?.authInfo?.token,
           p_id: subcategory_id,
+        });
+        return "error" in result ? fail(result.error) : ok(result.data);
+      },
+    );
+
+    server.registerTool(
+      "create_account",
+      {
+        title: "Register a bank account or a card",
+        description:
+          "Registers somewhere money moves through: a bank account, a wallet, or a credit card. A card is an account with type 'credit_card' — that is what makes it a card, and what lets a purchase be booked as credit. If an account with that name already exists it is updated instead of duplicated, because two accounts meaning the same thing split every balance in half.",
+        inputSchema: z.object({
+          name: z.string().min(1).max(80).describe("What you call it, e.g. 'Nubank' or 'Nubank Ultravioleta'"),
+          type: accountType
+            .default("checking")
+            .describe("Use 'credit_card' for a card, 'checking' for a bank account, 'cash' for a wallet"),
+          institution: z.string().max(80).optional().describe("The bank behind it"),
+          color: z
+            .string()
+            .regex(/^#[0-9a-fA-F]{6}$/)
+            .optional(),
+          opening_balance_cents: z
+            .number()
+            .int()
+            .optional()
+            .describe("What was already there when you started tracking, in CENTS. Not for cards."),
+          credit_limit_cents: z
+            .number()
+            .int()
+            .min(0)
+            .optional()
+            .describe("Cards only, in CENTS. R$ 15.000,00 is 1500000."),
+          statement_closing_day: z
+            .number()
+            .int()
+            .min(1)
+            .max(31)
+            .optional()
+            .describe("Cards only: day of the month the statement closes"),
+          statement_due_day: z
+            .number()
+            .int()
+            .min(1)
+            .max(31)
+            .optional()
+            .describe("Cards only: day of the month the bill is due"),
+          settlement_account_id: uuid
+            .optional()
+            .describe(
+              "Cards only: the bank account that pays this card's bill. Must not itself be a card.",
+            ),
+        }),
+      },
+      async (args, ctx) => {
+        const result = await callRpc<unknown>("api_upsert_account", {
+          p_token: ctx.http?.authInfo?.token,
+          p_name: args.name,
+          p_type: args.type,
+          p_institution: args.institution ?? null,
+          p_color: args.color ?? null,
+          p_opening_balance_cents: args.opening_balance_cents ?? null,
+          p_credit_limit_cents: args.credit_limit_cents ?? null,
+          p_statement_closing_day: args.statement_closing_day ?? null,
+          p_statement_due_day: args.statement_due_day ?? null,
+          p_settlement_account_id: args.settlement_account_id ?? null,
+        });
+        return "error" in result ? fail(result.error) : ok(result.data);
+      },
+    );
+
+    server.registerTool(
+      "update_account",
+      {
+        title: "Edit a bank account or card",
+        description:
+          "Changes an account's name, type, institution, colour, or a card's limit, statement days and settling account. Omitted fields are left alone. Turning an account into a card, or a card back into an account, is done here by changing the type.",
+        inputSchema: z.object({
+          account_id: uuid.describe("An account id from list_finances"),
+          name: z.string().min(1).max(80).optional(),
+          type: accountType.optional(),
+          institution: z
+            .string()
+            .max(80)
+            .optional()
+            .describe("Send an empty string to clear it"),
+          color: z
+            .string()
+            .regex(/^#[0-9a-fA-F]{6}$/)
+            .optional(),
+          credit_limit_cents: z.number().int().min(0).optional().describe("Cards only, in CENTS"),
+          statement_closing_day: z.number().int().min(1).max(31).optional(),
+          statement_due_day: z.number().int().min(1).max(31).optional(),
+          settlement_account_id: uuid
+            .optional()
+            .describe("Cards only: the bank account that pays this card's bill"),
+        }),
+      },
+      async (args, ctx) => {
+        const result = await callRpc<unknown>("api_update_account", {
+          p_token: ctx.http?.authInfo?.token,
+          p_id: args.account_id,
+          p_name: args.name ?? null,
+          p_type: args.type ?? null,
+          p_institution: args.institution ?? null,
+          p_color: args.color ?? null,
+          p_credit_limit_cents: args.credit_limit_cents ?? null,
+          p_statement_closing_day: args.statement_closing_day ?? null,
+          p_statement_due_day: args.statement_due_day ?? null,
+          p_settlement_account_id: args.settlement_account_id ?? null,
+        });
+        return "error" in result ? fail(result.error) : ok(result.data);
+      },
+    );
+
+    server.registerTool(
+      "archive_account",
+      {
+        title: "Remove a bank account or card",
+        description:
+          "Hides an account or card from the forms. Entries already booked against it keep pointing at it, so past months do not change shape. Reversible with restore_account.",
+        inputSchema: z.object({ account_id: uuid }),
+      },
+      async ({ account_id }, ctx) => {
+        const result = await callRpc<unknown>("api_archive_account", {
+          p_token: ctx.http?.authInfo?.token,
+          p_id: account_id,
+        });
+        return "error" in result ? fail(result.error) : ok(result.data);
+      },
+    );
+
+    server.registerTool(
+      "restore_account",
+      {
+        title: "Bring an archived account or card back",
+        description:
+          "Puts an archived account or card back on the forms so it can be used again.",
+        inputSchema: z.object({ account_id: uuid }),
+      },
+      async ({ account_id }, ctx) => {
+        const result = await callRpc<unknown>("api_restore_account", {
+          p_token: ctx.http?.authInfo?.token,
+          p_id: account_id,
         });
         return "error" in result ? fail(result.error) : ok(result.data);
       },

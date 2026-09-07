@@ -105,6 +105,16 @@ export const ptBR = {
     deleteGroup: (total: number) => `Excluir as ${total} parcelas`,
   },
 
+  paymentMethods: {
+    debit: "Débito",
+    credit: "Crédito",
+    pix: "Pix",
+    cash: "Dinheiro",
+    boleto: "Boleto",
+    transfer: "Transferência",
+    other: "Outra",
+  },
+
   entryForm: {
     kindGroup: "Tipo de lançamento",
     expense: "Gasto",
@@ -142,6 +152,11 @@ export const ptBR = {
       "Transferência precisa de duas contas diferentes e sem categoria.",
     subcategoryMismatch:
       "Essa subcategoria não pertence à categoria escolhida.",
+    paymentMethod: "Forma de pagamento",
+    noPaymentMethod: "Não informada",
+    paymentMethodOnCard: "Compra no cartão é sempre crédito",
+    creditNeedsCard:
+      "Crédito só em conta do tipo cartão. Escolha o cartão ou outra forma de pagamento.",
     saveFailed: "Não foi possível salvar o lançamento.",
   },
 
@@ -253,6 +268,11 @@ export const ptBR = {
       invalidDay: "Informe um dia entre 1 e 31.",
       invalidAccount: "Conta inválida.",
       duplicate: "Já existe uma conta com esse nome.",
+      settlement: "Conta que paga a fatura",
+      settlementHint: "Onde o dinheiro sai quando a fatura vence",
+      noSettlement: "Não informada",
+      invalidSettlement: "Escolha uma conta válida.",
+      settlementCannotBeCard: "A conta que paga a fatura não pode ser outro cartão.",
       saveFailed: "Não foi possível salvar a conta.",
     },
   },

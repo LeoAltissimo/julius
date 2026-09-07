@@ -45,6 +45,7 @@ export type Database = {
           institution: string | null
           name: string
           opening_balance_cents: number
+          settlement_account_id: string | null
           sort_order: number
           statement_closing_day: number | null
           statement_due_day: number | null
@@ -62,6 +63,7 @@ export type Database = {
           institution?: string | null
           name: string
           opening_balance_cents?: number
+          settlement_account_id?: string | null
           sort_order?: number
           statement_closing_day?: number | null
           statement_due_day?: number | null
@@ -79,6 +81,7 @@ export type Database = {
           institution?: string | null
           name?: string
           opening_balance_cents?: number
+          settlement_account_id?: string | null
           sort_order?: number
           statement_closing_day?: number | null
           statement_due_day?: number | null
@@ -182,6 +185,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["entry_kind"]
           notes: string | null
           occurred_on: string
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
           source: string
           subcategory_id: string | null
           updated_at: string
@@ -202,6 +206,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["entry_kind"]
           notes?: string | null
           occurred_on: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
           source?: string
           subcategory_id?: string | null
           updated_at?: string
@@ -222,6 +227,7 @@ export type Database = {
           kind?: Database["public"]["Enums"]["entry_kind"]
           notes?: string | null
           occurred_on?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
           source?: string
           subcategory_id?: string | null
           updated_at?: string
@@ -448,6 +454,10 @@ export type Database = {
       }
     }
     Functions: {
+      api_archive_account: {
+        Args: { p_id: string; p_token: string }
+        Returns: Json
+      }
       api_archive_category: {
         Args: { p_id: string; p_token: string }
         Returns: Json
@@ -496,11 +506,30 @@ export type Database = {
         Args: { p_limit?: number; p_token: string }
         Returns: Json
       }
+      api_restore_account: {
+        Args: { p_id: string; p_token: string }
+        Returns: Json
+      }
       api_restore_investment: {
         Args: { p_id: string; p_token: string }
         Returns: Json
       }
       api_snapshot: { Args: { p_token: string }; Returns: Json }
+      api_update_account: {
+        Args: {
+          p_color?: string
+          p_credit_limit_cents?: number
+          p_id: string
+          p_institution?: string
+          p_name?: string
+          p_settlement_account_id?: string
+          p_statement_closing_day?: number
+          p_statement_due_day?: number
+          p_token: string
+          p_type?: string
+        }
+        Returns: Json
+      }
       api_update_category: {
         Args: {
           p_color?: string
@@ -526,6 +555,21 @@ export type Database = {
       }
       api_update_investment_values: {
         Args: { p_token: string; p_values: Json }
+        Returns: Json
+      }
+      api_upsert_account: {
+        Args: {
+          p_color?: string
+          p_credit_limit_cents?: number
+          p_institution?: string
+          p_name: string
+          p_opening_balance_cents?: number
+          p_settlement_account_id?: string
+          p_statement_closing_day?: number
+          p_statement_due_day?: number
+          p_token: string
+          p_type?: string
+        }
         Returns: Json
       }
       api_upsert_category: {
@@ -588,6 +632,14 @@ export type Database = {
         | "other"
       category_kind: "expense" | "income"
       entry_kind: "expense" | "income" | "transfer"
+      payment_method:
+        | "debit"
+        | "credit"
+        | "pix"
+        | "cash"
+        | "boleto"
+        | "transfer"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never

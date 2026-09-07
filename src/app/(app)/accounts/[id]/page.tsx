@@ -57,6 +57,7 @@ export default async function EditAccountPage({
       <AccountForm
         action={updateAccount}
         account={account}
+        accounts={accounts}
         submitLabel={t.common.saveChanges}
       />
 

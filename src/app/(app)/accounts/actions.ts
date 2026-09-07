@@ -44,6 +44,15 @@ function accountSchema(t: Messages) {
     creditLimitCents: z.coerce.number().int().min(0),
     statementClosingDay: optionalDay,
     statementDueDay: optionalDay,
+    settlementAccountId: z
+      .string()
+      .trim()
+      .transform((value) => (value === "" ? null : value))
+      .nullable()
+      .refine(
+        (value) => value === null || z.string().uuid().safeParse(value).success,
+        t.accounts.form.invalidSettlement,
+      ),
   });
 }
 
@@ -59,6 +68,7 @@ function readForm(t: Messages, formData: FormData) {
     creditLimitCents: formData.get("creditLimitCents") ?? 0,
     statementClosingDay: formData.get("statementClosingDay") ?? "",
     statementDueDay: formData.get("statementDueDay") ?? "",
+    settlementAccountId: formData.get("settlementAccountId") ?? "",
   });
 }
 
@@ -74,6 +84,7 @@ function shape(value: AccountValues) {
     credit_limit_cents: isCard ? value.creditLimitCents : null,
     statement_closing_day: isCard ? value.statementClosingDay : null,
     statement_due_day: isCard ? value.statementDueDay : null,
+    settlement_account_id: isCard ? value.settlementAccountId : null,
   };
 }
 
@@ -84,9 +95,11 @@ function revalidateAccountPages() {
 }
 
 function describe(t: Messages, message: string): string {
-  return message.includes("_name_key")
-    ? t.accounts.form.duplicate
-    : t.accounts.form.saveFailed;
+  if (message.includes("_name_key")) return t.accounts.form.duplicate;
+  if (message.includes("settlement_cannot_be_card")) {
+    return t.accounts.form.settlementCannotBeCard;
+  }
+  return t.accounts.form.saveFailed;
 }
 
 export async function createAccount(
