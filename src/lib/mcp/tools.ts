@@ -154,19 +154,62 @@ export function registerJuliusTools(server: McpServer) {
     server.registerTool(
       "list_recent_transactions",
       {
-        title: "List recent transactions",
+        title: "List and total transactions",
         description:
-          "The most recent entries, newest first. Useful for checking whether a receipt was already recorded before booking it again.",
+          "Entries newest first, narrowed by any combination of date range, category, subcategory and account, with the totals already summed. Use it to check whether a receipt was booked before booking it again, and to answer \"quanto gastei com X neste mês\" without adding anything up yourself. The totals cover everything matching the filters, not just the page `limit` returns, and spending and income are totalled apart because adding them together would mean nothing.",
         inputSchema: z.object({
-          limit: z.number().int().min(1).max(200).default(20),
+          limit: z
+            .number()
+            .int()
+            .min(1)
+            .max(200)
+            .default(20)
+            .describe("How many entries to return. The totals ignore this."),
+          from_date: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/)
+            .optional()
+            .describe("Only entries on or after this date, YYYY-MM-DD"),
+          to_date: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/)
+            .optional()
+            .describe("Only entries on or before this date, YYYY-MM-DD"),
+          category_id: uuid
+            .optional()
+            .describe("A macro category id from list_finances"),
+          subcategory_id: uuid
+            .optional()
+            .describe(
+              "A subcategory id from list_finances. Independent of category_id: narrowing to one subcategory does not need the category as well.",
+            ),
+          account_id: uuid.optional().describe("An account or card id from list_finances"),
         }),
       },
-      async ({ limit }, ctx) => {
-        const result = await callRpc<unknown>("api_recent_entries", {
+      async (args, ctx) => {
+        const result = await callRpc<{
+          matching: number;
+          total_cents: number;
+          expense_cents: number;
+          income_cents: number;
+        }>("api_recent_entries", {
           p_token: ctx.http?.authInfo?.token,
-          p_limit: limit,
+          p_limit: args.limit,
+          p_from_date: args.from_date ?? null,
+          p_to_date: args.to_date ?? null,
+          p_category_id: args.category_id ?? null,
+          p_subcategory_id: args.subcategory_id ?? null,
+          p_account_id: args.account_id ?? null,
         });
-        return "error" in result ? fail(result.error) : ok(result.data);
+
+        if ("error" in result) return fail(result.error);
+
+        return ok({
+          ...result.data,
+          total: formatCents(result.data.total_cents),
+          expense_total: formatCents(result.data.expense_cents),
+          income_total: formatCents(result.data.income_cents),
+        });
       },
     );
 
@@ -204,6 +247,122 @@ export function registerJuliusTools(server: McpServer) {
             (e) => `${e.description || "(sem descrição)"}: ${formatCents(e.amount_cents)}`,
           ),
         });
+      },
+    );
+
+    server.registerTool(
+      "update_transaction",
+      {
+        title: "Correct a transaction already booked",
+        description:
+          "Fixes an entry that was recorded wrong — wrong amount, wrong category, wrong account, wrong date. Send only the fields that change: anything you leave out stays as it is, and sending a field as null clears it. Two traps. On an instalment purchase this edits ONLY the instalment you point at unless you pass apply_to_series, and with apply_to_series an amount_cents is the price of the WHOLE purchase, re-split across the instalments, while a date moves the whole series by the same shift. And a card settles its own payment method: booking against a credit card forces `credit` whatever you ask for, which the answer reports back.",
+        inputSchema: z.object({
+          transaction_id: uuid.describe(
+            "An entry id, from list_recent_transactions or from what record_transactions returned",
+          ),
+          kind: z.enum(["expense", "income", "transfer"]).optional(),
+          amount_cents: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe(
+              "New amount as an INTEGER NUMBER OF CENTS. R$ 87,90 is 8790. With apply_to_series this is the total of the whole purchase, not of one instalment.",
+            ),
+          occurred_on: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/)
+            .optional()
+            .describe("YYYY-MM-DD"),
+          account_id: uuid.optional().describe("An account or card id from list_finances"),
+          counter_account_id: uuid
+            .nullable()
+            .optional()
+            .describe("Destination account, transfers only. null clears it."),
+          category_id: uuid
+            .nullable()
+            .optional()
+            .describe(
+              "A macro category id from list_finances; must match the entry's kind. null clears it.",
+            ),
+          subcategory_id: uuid
+            .nullable()
+            .optional()
+            .describe(
+              "A subcategory id that belongs to category_id. null clears it. Clearing a category clears this too, so send both.",
+            ),
+          description: z.string().max(200).optional(),
+          notes: z.string().max(2000).nullable().optional(),
+          payment_method: paymentMethod.nullable().optional(),
+          apply_to_series: z
+            .boolean()
+            .default(false)
+            .describe(
+              "Apply the change to every instalment of the purchase instead of just the one pointed at. Ignored on an entry that is not an instalment.",
+            ),
+        }),
+      },
+      async ({ transaction_id, apply_to_series, ...fields }, ctx) => {
+        // Only the keys the agent actually sent reach the patch. That is what
+        // lets an absent field mean "leave it" and an explicit null mean
+        // "clear it" — a distinction a column of nullable arguments cannot
+        // make, and the reason the database takes jsonb here.
+        const patch = Object.fromEntries(
+          Object.entries(fields).filter(([, value]) => value !== undefined),
+        );
+
+        if (Object.keys(patch).length === 0) {
+          return fail(
+            "Nada para alterar: envie ao menos um campo além de transaction_id.",
+          );
+        }
+
+        const result = await callRpc<{
+          entry: { amount_cents: number; description: string };
+          applied_to: string;
+          entries_changed: number;
+          payment_method_forced_to_credit: boolean;
+        }>("api_update_entry", {
+          p_token: ctx.http?.authInfo?.token,
+          p_id: transaction_id,
+          p_patch: patch,
+          p_apply_to_series: apply_to_series,
+        });
+
+        if ("error" in result) return fail(result.error);
+
+        return ok({
+          ...result.data,
+          confirm_with_the_user: `${result.data.entry.description || "(sem descrição)"}: ${formatCents(result.data.entry.amount_cents)}`,
+        });
+      },
+    );
+
+    server.registerTool(
+      "delete_transaction",
+      {
+        title: "Delete a transaction",
+        description:
+          "Removes an entry for good. Irreversible, so confirm with the user first — there is no archive to restore it from, and correcting a mistake is usually update_transaction rather than this. On one instalment of a purchase the call is refused until you say which you meant: delete_series false removes that instalment alone, true removes every instalment of the purchase.",
+        inputSchema: z.object({
+          transaction_id: uuid.describe(
+            "An entry id, from list_recent_transactions or from what record_transactions returned",
+          ),
+          delete_series: z
+            .boolean()
+            .optional()
+            .describe(
+              "Required on an instalment: true wipes the whole purchase, false removes only the instalment pointed at. Leave it out on an ordinary entry.",
+            ),
+        }),
+      },
+      async ({ transaction_id, delete_series }, ctx) => {
+        const result = await callRpc<unknown>("api_delete_entry", {
+          p_token: ctx.http?.authInfo?.token,
+          p_id: transaction_id,
+          p_delete_series: delete_series ?? null,
+        });
+        return "error" in result ? fail(result.error) : ok(result.data);
       },
     );
 
