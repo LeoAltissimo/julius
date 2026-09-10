@@ -474,6 +474,10 @@ export type Database = {
         Args: { p_entries: Json; p_token: string }
         Returns: Json
       }
+      api_delete_entry: {
+        Args: { p_delete_series?: boolean; p_id: string; p_token: string }
+        Returns: Json
+      }
       api_delete_investment: {
         Args: { p_id: string; p_token: string }
         Returns: Json
@@ -503,7 +507,15 @@ export type Database = {
         Returns: Json
       }
       api_recent_entries: {
-        Args: { p_limit?: number; p_token: string }
+        Args: {
+          p_account_id?: string
+          p_category_id?: string
+          p_from_date?: string
+          p_limit?: number
+          p_subcategory_id?: string
+          p_to_date?: string
+          p_token: string
+        }
         Returns: Json
       }
       api_restore_account: {
@@ -536,6 +548,15 @@ export type Database = {
           p_description?: string
           p_id: string
           p_name?: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      api_update_entry: {
+        Args: {
+          p_apply_to_series?: boolean
+          p_id: string
+          p_patch: Json
           p_token: string
         }
         Returns: Json
@@ -604,6 +625,7 @@ export type Database = {
         Returns: Json
       }
       api_user_for_token: { Args: { p_token: string }; Returns: string }
+      entry_as_json: { Args: { p_id: string }; Returns: Json }
       move_subcategory: {
         Args: { p_subcategory_id: string; p_target_category_id: string }
         Returns: number
@@ -616,6 +638,7 @@ export type Database = {
         }
         Returns: number
       }
+      repair_installment_groups: { Args: never; Returns: number }
       restore_default_categories: { Args: never; Returns: undefined }
       seed_default_categories: {
         Args: { p_user_id: string }

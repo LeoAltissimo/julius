@@ -115,9 +115,26 @@ Tools: `list_finances`, `list_recent_transactions`, `record_transactions`,
 `create_category`, `create_subcategory`, `update_category`, `move_subcategory`,
 `merge_subcategories`, `archive_subcategory`, `archive_category`,
 `create_account`, `update_account`, `archive_account`, `restore_account`,
+`update_transaction`, `delete_transaction`,
 `list_investments`, `add_investment`, `update_investment`,
 `update_investment_values`, `archive_investment`, `restore_investment`,
 `delete_investment`.
+
+**Booking is not the whole job.** A receipt filed under the wrong category
+needs a way back out, so `update_transaction` takes only the fields that
+change — an absent field stays, an explicit `null` clears, which is why the
+patch reaches the database as jsonb rather than as a column of nullable
+arguments. `delete_transaction` is the irreversible one. On an instalment
+purchase both are deliberately awkward: an edit touches only the instalment
+you point at unless you pass `apply_to_series`, and a delete refuses outright
+until you say whether you meant the instalment or the whole purchase. Guessing
+there quietly destroys eleven rows nobody asked about.
+
+**`list_recent_transactions` sums for you.** It narrows by date range,
+category, subcategory and account, and returns the totals of everything
+matching rather than of the page it returns — so "quanto gastei com jogos esse
+mês" is one call instead of fetching every row and adding them up outside the
+database. Spending and income are totalled apart.
 
 An entry carries **how it was paid** — debit, credit, pix, cash, boleto,
 transfer — alongside which account it moved through. A card is an account of
@@ -156,6 +173,23 @@ repeat is reported as a duplicate and ignored rather than booked again.
 `R$ 154,99` alongside what it wrote, because the one mistake that really hurts
 is sending reais where cents were expected and booking a hundred times the
 real value.
+
+## Tests
+
+The guarantees this app makes live in the database, so that is where the tests
+are. `supabase/tests/api_entries.test.sql` runs the whole entry API against a
+real Postgres — editing, deleting, instalment scope, the filters, the refusals,
+and the isolation between two accounts — inside one transaction that is rolled
+back at the end, so it leaves nothing behind and is safe to run twice.
+
+```
+pnpm db:start   # once
+pnpm test:db
+```
+
+It uses plain `psql` and no extension, deliberately: the suite has to run
+anywhere psql does, and pgTAP would be the heaviest thing in it. A failing
+assertion aborts with `FAIL` and the name of what broke.
 
 ## Icons
 

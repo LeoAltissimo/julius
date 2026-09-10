@@ -28,6 +28,18 @@ export function describeApiError(message: string): string {
   if (message.includes("unknown_subcategory")) {
     return "Subcategoria não encontrada. Chame list_finances para ver os ids válidos.";
   }
+  if (message.includes("unknown_entry")) {
+    return "Lançamento não encontrado. Chame list_recent_transactions para ver os ids válidos.";
+  }
+  if (message.includes("category_kind_mismatch")) {
+    return "A categoria escolhida é de outro tipo: gasto vai em categoria de gasto, entrada em categoria de entrada.";
+  }
+  if (message.includes("amount_must_be_positive")) {
+    return "O valor precisa ser um número inteiro de centavos maior que zero.";
+  }
+  if (message.includes("installment_needs_explicit_scope")) {
+    return "Esse lançamento é uma parcela. Diga delete_series=false para apagar só essa parcela, ou delete_series=true para apagar a compra inteira.";
+  }
   if (message.includes("unknown_account")) {
     return "Conta ou cartão não encontrado. Chame list_finances para ver os ids válidos.";
   }
